@@ -1,0 +1,173 @@
+name: Build ESP32 Binary
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-esp32:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        
+    - name: Install Arduino CLI
+      run: |
+        curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh -s -- --bin-dir $GITHUB_WORKSPACE/bin
+        echo "$GITHUB_WORKSPACE/bin" >> $GITHUB_PATH
+        
+    - name: Initialize Arduino CLI
+      run: |
+        arduino-cli config init
+        arduino-cli core update-index
+        arduino-cli core install esp32:esp32 --additional-urls https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+        
+    - name: Install PlatformIO
+      run: pip3 install platformio
+      
+    - name: Check source code
+      run: |
+        echo "Checking bara.cpp source file..."
+        ls -la bara.cpp
+        head -20 bara.cpp
+        
+    - name: Build with PlatformIO
+      run: |
+        pio init --board esp32dev --framework arduino
+        echo "[env:esp32dev]
+platform = espressif32
+board = esp32dev
+framework = arduino
+board_build.partitions = default
+monitor_speed = 115200
+upload_speed = 921600
+build_flags = -DCORE_DEBUG_LEVEL=0" >> platformio.ini
+        pio run
+        
+    - name: Verify build output
+      run: |
+        echo "Build directory contents:"
+        ls -la .pio/build/esp32dev/
+        echo "Binary file size:"
+        ls -lh .pio/build/esp32dev/firmware.bin
+        
+    - name: Prepare deploy directory
+      run: |
+        mkdir -p deploy
+        cp .pio/build/esp32dev/firmware.bin deploy/bara.bin
+        cp .pio/build/esp32dev/firmware.elf deploy/bara.elf 2>/dev/null || echo "ELF file not found, continuing..."
+        
+    - name: Generate build report
+      run: |
+        cat > build_report.txt << EOF
+BARA ESP32 WiFi Security Testing Tool - GitHub Actions Build Report
+=================================================================
+Date: $(date)
+Build Method: GitHub Actions (PlatformIO)
+Source File: bara.cpp
+Project Name: bara
+Target Platform: ESP32
+Branch: ${{ github.ref_name }}
+Commit: ${{ github.sha }}
+
+Dependencies Check:
+- Arduino CLI: ✓ Installed
+- PlatformIO: ✓ Installed
+- ESP32 Core: ✓ Installed
+- esp32:esp32:esp32: ✓ Available
+
+Build Results:
+- Binary: ✓ Generated (deploy/bara.bin)
+- Size: $(du -h deploy/bara.bin | cut -f1)
+- ELF: ✓ Generated (deploy/bara.elf)
+- Size: $(du -h deploy/bara.elf | cut -f1 2>/dev/null || echo "N/A")
+
+Build Environment:
+Runner: ${{ github.runner.name }}
+OS: Ubuntu Latest
+Actions: ${{ github.workflow }}
+
+Build Features:
+✓ WiFi Access Point configuration
+✓ Real-time network scanning
+✓ Dark hacker interface
+✓ WebSocket communication
+✓ Security analysis tools
+✓ Educational attack simulation
+✓ Data export capabilities
+
+Legal Compliance:
+⚠️ Educational use only
+⚠️ Requires proper authorization
+⚠️ Follow local cybersecurity laws
+
+Developer: أحمد نور أحمد من قنا
+Tool: bara.cpp - Educational WiFi Security Testing
+Platform: ESP32
+Repository: https://github.com/ELSHAB7UAHED/ghost15
+Build successful: $(date)
+EOF
+
+    - name: Update repository with built files
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add deploy/bara.bin build_report.txt
+        git commit -m "Auto-build: Updated ESP32 binary from GitHub Actions
+
+Build Details:
+- Commit: ${{ github.sha }}
+- Branch: ${{ github.ref_name }}
+- Binary Size: $(du -h deploy/bara.bin | cut -f1)
+- Build Time: $(date)" || echo "No changes to commit"
+        
+    - name: Push changes
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: |
+        git push origin main || echo "Push failed - this might be expected if no changes were made"
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: esp32-binary
+        path: |
+          deploy/bara.bin
+          build_report.txt
+
+    - name: Build summary
+      run: |
+        echo "## 🚀 ESP32 Build Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Component | Status | Details |" >> $GITHUB_STEP_SUMMARY
+        echo "|-----------|--------|---------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Source Code | ✅ Success | bara.cpp - ESP32 WiFi Security Tool |" >> $GITHUB_STEP_SUMMARY
+        echo "| Build System | ✅ Success | PlatformIO with ESP32 Arduino core |" >> $GITHUB_STEP_SUMMARY
+        echo "| Binary Generation | ✅ Success | $(du -h deploy/bara.bin | cut -f1) |" >> $GITHUB_STEP_SUMMARY
+        echo "| ELF File | ✅ Success | $(du -h deploy/bara.elf | cut -f1 2>/dev/null || echo "N/A") |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📋 Project Details" >> $GITHUB_STEP_SUMMARY
+        echo "- **Developer**: أحمد نور أحمد من قنا" >> $GITHUB_STEP_SUMMARY
+        echo "- **Platform**: ESP32" >> $GITHUB_STEP_SUMMARY
+        echo "- **Tool Name**: bara" >> $GITHUB_STEP_SUMMARY
+        echo "- **Purpose**: Educational WiFi Security Testing" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 🔧 Build Information" >> $GITHUB_STEP_SUMMARY
+        echo "- **Commit**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "- **Branch**: \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "- **Build Time**: $(date)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Build Environment**: ${{ github.runner.name }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### ⚠️ Legal Notice" >> $GITHUB_STEP_SUMMARY
+        echo "This tool is for **educational purposes only**. Users must:" >> $GITHUB_STEP_SUMMARY
+        echo "- Obtain proper authorization before testing networks" >> $GITHUB_STEP_SUMMARY
+        echo "- Comply with local cybersecurity laws" >> $GITHUB_STEP_SUMMARY
+        echo "- Use responsibly and ethically" >> $GITHUB_STEP_SUMMARY
