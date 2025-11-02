@@ -1,0 +1,48 @@
+# Required Libraries for bara.cpp
+# ESP32 WiFi Security Testing Tool
+
+# Core ESP32 Libraries (included in ESP32 core)
+- WiFi.h
+- WebServer.h
+- ArduinoJson
+- ESPAsyncWebSrv
+- SPIFFS.h
+- FS.h
+- DNSServer.h
+- WiFiManager.h
+- Ticker.h
+
+# Additional Dependencies for Arduino IDE
+ArduinoJson >= 6.0.0
+ESP Async WebServer >= 1.2.3
+
+# Board Package Requirements
+ESP32 Board Package >= 2.0.0
+Arduino Core for ESP32 >= 2.0.0
+
+# Optional: For advanced features
+- PubSubClient (for MQTT integration)
+- WiFiManager (for advanced WiFi management)
+- Preferences (for data storage)
+- ArduinoOTA (for OTA updates)
+
+# Development Tools
+- Arduino IDE >= 2.0.0
+- PlatformIO Extension (VS Code)
+- ESP32 Board Manager
+- USB Drivers for ESP32
+
+# Memory Requirements
+- Minimum Free RAM: 50KB+
+- Recommended RAM: 200KB+
+- Flash Storage: 4MB (SPIFFS)
+
+# Supported ESP32 Boards
+- ESP32 DevKit v1
+- ESP32 DevKit v4
+- ESP32-WROOM-32
+- ESP32-CAM
+- NodeMCU-32S
+
+# Note: All libraries are included in ESP32 core installation
+# No additional library installation required for basic functionality
